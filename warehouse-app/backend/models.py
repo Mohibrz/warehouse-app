@@ -117,11 +117,13 @@ class Transaction(Base):
     # For "transfer" type: destination warehouse. NULL for in/out/adjustment.
     target_warehouse_id = Column(Integer, ForeignKey("warehouses.id"), nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    shelf_id = Column(Integer, ForeignKey("shelves.id"), nullable=True)  # ✅ حقل جديد للرف (للحركة)
 
     item = relationship("Item", back_populates="transactions")
     warehouse = relationship("Warehouse", back_populates="transactions", foreign_keys=[warehouse_id])
     target_warehouse = relationship("Warehouse", foreign_keys=[target_warehouse_id])
     user = relationship("User", back_populates="transactions")
+    shelf = relationship("Shelf", foreign_keys=[shelf_id])
 
 
 class ActivityLog(Base):

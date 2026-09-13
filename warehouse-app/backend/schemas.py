@@ -202,6 +202,7 @@ class TransactionCreate(BaseModel):
     notes: Optional[str] = Field(None, max_length=500)
     # For transfers
     target_warehouse_id: Optional[int] = Field(None, gt=0)
+    shelf_id: Optional[int] = Field(None, gt=0)  # ✅ حقل جديد للرف
 
     class Config:
         json_schema_extra = {
@@ -222,6 +223,7 @@ class TransactionUpdate(BaseModel):
     warehouse_id: Optional[int] = Field(None, gt=0)
     notes: Optional[str] = Field(None, max_length=500)
     target_warehouse_id: Optional[int] = Field(None, gt=0)
+    shelf_id: Optional[int] = Field(None, gt=0)  # ✅ حقل جديد للرف
 
 
 class TransactionResponse(BaseModel):
@@ -233,6 +235,8 @@ class TransactionResponse(BaseModel):
     item_id: int
     warehouse_id: int
     target_warehouse_id: Optional[int] = None
+    shelf_id: Optional[int] = None  # ✅ حقل جديد للرف
+    shelf_name: Optional[str] = None  # ✅ اسم الرف
     user_id: Optional[int]
     item_name: Optional[str] = None
     warehouse_name: Optional[str] = None

@@ -1,29 +1,35 @@
 ```
-# Dependencies
+# Python
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-.venv/
-venv/
+.Python
 env/
-.env
-.env.local
-.env.*
+venv/
+.venv/
+.ENV
+.ENV.local
 
 # Build artifacts
-dist/
 build/
+dist/
 *.egg-info/
 
 # Logs
 *.log
+
+# Environment
+.env
+.env.local
+*.env.*
 
 # Editors
 .vscode/
 .idea/
 *.swp
 *.swo
+*.tmp
 
 # OS
 .DS_Store

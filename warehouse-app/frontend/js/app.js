@@ -64,6 +64,7 @@ document.addEventListener('DOMContentLoaded', function() {
         transactionType: document.getElementById('transaction-type'),
         transactionQuantity: document.getElementById('transaction-quantity'),
         transactionTargetWarehouse: document.getElementById('transaction-target-warehouse'),
+        transactionShelf: document.getElementById('transaction-shelf'),
         cancelTransactionBtn: document.getElementById('cancel-transaction-btn'),
         transactionNotes: document.getElementById('transaction-notes'),
         showAddTransactionBtn: document.getElementById('show-add-transaction-btn'),

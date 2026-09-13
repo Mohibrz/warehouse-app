@@ -154,6 +154,8 @@ def create_transaction(
     user=Depends(require_role("staff")),
 ):
     """تسجيل حركة مخزون (دخول، خروج، نقل، تعديل)"""
+    from ..models import Shelf
+    
     item, warehouse, target_warehouse = _validate_transaction(
         db,
         data.type,
@@ -162,6 +164,13 @@ def create_transaction(
         data.warehouse_id,
         data.target_warehouse_id,
     )
+
+    # التحقق من الرف إذا تم تحديده
+    shelf = None
+    if data.shelf_id is not None and data.shelf_id > 0:
+        shelf = db.query(Shelf).filter(Shelf.id == data.shelf_id).first()
+        if not shelf:
+            raise HTTPException(status_code=404, detail="الرف غير موجود")
 
     transaction = Transaction(
         type=data.type,
@@ -173,6 +182,7 @@ def create_transaction(
             data.target_warehouse_id if data.type == "transfer" else None
         ),
         user_id=user.id,
+        shelf_id=data.shelf_id if data.shelf_id and data.shelf_id > 0 else None,
     )
     db.add(transaction)
     db.flush()
@@ -206,7 +216,11 @@ def list_transactions(
     user=Depends(get_current_user),
 ):
     """قائمة حركات المخزون مع التصفية"""
-    query = db.query(Transaction)
+    from ..models import Shelf
+    
+    query = db.query(Transaction, Shelf.name.label("shelf_name")).outerjoin(
+        Shelf, Transaction.shelf_id == Shelf.id
+    )
     if item_id:
         query = query.filter(Transaction.item_id == item_id)
     if warehouse_id:
@@ -216,7 +230,27 @@ def list_transactions(
         )
     if type:
         query = query.filter(Transaction.type == type)
-    return query.order_by(Transaction.date.desc()).offset(offset).limit(limit).all()
+    
+    results = query.order_by(Transaction.date.desc()).offset(offset).limit(limit).all()
+    
+    return [
+        {
+            "id": tx.id,
+            "type": tx.type,
+            "quantity": tx.quantity,
+            "date": tx.date,
+            "notes": tx.notes,
+            "item_id": tx.item_id,
+            "warehouse_id": tx.warehouse_id,
+            "target_warehouse_id": tx.target_warehouse_id,
+            "shelf_id": tx.shelf_id,
+            "shelf_name": shelf_name,
+            "user_id": tx.user_id,
+            "item_name": tx.item.name if tx.item else None,
+            "warehouse_name": tx.warehouse.name if tx.warehouse else None,
+        }
+        for tx, shelf_name in results
+    ]
 
 
 @router.get("/{transaction_id}", response_model=TransactionResponse)

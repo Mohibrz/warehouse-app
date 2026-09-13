@@ -141,6 +141,7 @@
                                 <th>الحد الأدنى</th>
                                 <th>السعر</th>
                                 <th>المستودع</th>
+                                <th>الرف</th>
                                 <th>الإجراءات</th>
                             </tr>
                         </thead>
@@ -441,6 +442,7 @@
                                 <th>التاريخ</th>
                                 <th>الصنف</th>
                                 <th>المستودع</th>
+                                <th>الرف</th>
                                 <th>النوع</th>
                                 <th>الكمية</th>
                                 <th>الملاحظات</th>
@@ -497,6 +499,12 @@
                                 <option value="">اختر مستودع الهدف</option>
                             </select>
                         </div>
+                        <div class="form-group" id="transaction-shelf-row">
+                            <label for="transaction-shelf">الرف (اختياري)</label>
+                            <select id="transaction-shelf">
+                                <option value="">اختر الرف</option>
+                            </select>
+                        </div>
                         <div class="form-group">
                             <label for="transaction-notes">الملاحظات</label>
                             <textarea id="transaction-notes" rows="2" placeholder="اختياري"></textarea>
@@ -525,6 +533,7 @@
                             <th>الصنف</th>
                             <th>رمز الصنف</th>
                             <th>المستودع</th>
+                            <th>الرف</th>
                             <th>الكمية</th>
                             <th>الحد الأدنى</th>
                             <th>الحالة</th>
