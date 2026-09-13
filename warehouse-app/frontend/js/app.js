@@ -47,6 +47,14 @@ document.addEventListener('DOMContentLoaded', function() {
         warehouseLocation: document.getElementById('warehouse-location'),
         showAddWarehouseBtn: document.getElementById('show-add-warehouse-btn'),
 
+        // Shelves
+        shelvesTableBody: document.getElementById('shelves-table-body'),
+        shelfForm: document.getElementById('shelf-form'),
+        shelfId: document.getElementById('shelf-id'),
+        shelfName: document.getElementById('shelf-name'),
+        shelfWarehouse: document.getElementById('shelf-warehouse'),
+        showAddShelfBtn: document.getElementById('show-add-shelf-btn'),
+
         // Transactions
         transactionsTableBody: document.getElementById('transactions-table-body'),
         transactionForm: document.getElementById('transaction-form'),
@@ -78,6 +86,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let state = {
         items: [],
         warehouses: [],
+        shelves: [],
         categories: [],
         transactions: [],
         stock: [],
@@ -708,6 +717,7 @@ themeToggle.addEventListener('click', () => {
                 stock: loadStock,
                 alerts: loadAlerts,
                 warehouses: loadWarehouses,
+                shelves: loadShelves,
                 dashboard: loadDashboard,
                 users: loadUsers,
                 activity: loadActivityLogs,
@@ -923,6 +933,53 @@ themeToggle.addEventListener('click', () => {
             showMessage(id ? 'تم تحديث المستودع' : 'تم إضافة المستودع');
             closeWarehouseModal();
             await loadWarehouses();
+        } catch (error) {
+            showMessage(error.message, 'error');
+        }
+    });
+
+    // Shelves form (using modal)
+    elements.showAddShelfBtn.addEventListener('click', () => {
+        openShelfModal(false);
+    });
+    const cancelShelfBtn = document.getElementById('cancel-shelf-btn');
+    if (cancelShelfBtn) {
+        cancelShelfBtn.addEventListener('click', closeShelfModal);
+    }
+    const closeShelfModalBtn = document.getElementById('close-shelf-modal');
+    if (closeShelfModalBtn) {
+        closeShelfModalBtn.addEventListener('click', closeShelfModal);
+    }
+
+    // إغلاق modal عند الضغط خارجه
+    const shelfModal = document.getElementById('shelf-modal');
+    if (shelfModal) {
+        shelfModal.addEventListener('click', (e) => {
+            if (e.target === shelfModal) closeShelfModal();
+        });
+    }
+
+    elements.shelfForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        try {
+            const id = elements.shelfId.value;
+            const data = {
+                name: elements.shelfName.value.trim(),
+                warehouse_id: parseInt(elements.shelfWarehouse.value)
+            };
+            const url = id ? `${API_BASE_URL}/api/shelves/${id}` : `${API_BASE_URL}/api/shelves`;
+            const method = id ? 'PUT' : 'POST';
+            const response = await fetch(url, {
+                method,
+                headers: {'Content-Type': 'application/json', ...getAuthHeaders()},
+                body: JSON.stringify(data)
+            });
+            if (!response.ok) {
+                throw new Error(await extractApiError(response, 'فشل الحفظ'));
+            }
+            showMessage(id ? 'تم تحديث الرف' : 'تم إضافة الرف');
+            closeShelfModal();
+            await loadShelves();
         } catch (error) {
             showMessage(error.message, 'error');
         }
@@ -1812,6 +1869,19 @@ themeToggle.addEventListener('click', () => {
         }
     }
 
+    async function loadShelves() {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/shelves`, {headers: getAuthHeaders()});
+            if (!response.ok) throw new Error('فشل تحميل الأرفف');
+            state.shelves = await response.json();
+            renderShelvesTable();
+            updateShelfWarehouseSelects();
+        } catch (error) {
+            console.error(error);
+            state.shelves = [];
+        }
+    }
+
     function updateCategorySelects() {
         const select = document.getElementById('item-category');
         if (!select) return;
@@ -2300,6 +2370,32 @@ function renderItemsTable() {
         });
     }
 
+    function renderShelvesTable() {
+        elements.shelvesTableBody.innerHTML = '';
+        const searchTerm = (document.getElementById('shelf-search').value || '').toLowerCase();
+        const whMap = Object.fromEntries(state.warehouses.map(w => [w.id, w]));
+        const filteredShelves = state.shelves.filter(shelf => {
+            const wh = whMap[shelf.warehouse_id];
+            const whName = wh ? wh.name.toLowerCase() : '';
+            return !searchTerm ||
+                shelf.name.toLowerCase().includes(searchTerm) ||
+                whName.includes(searchTerm);
+        });
+        filteredShelves.forEach(shelf => {
+            const tr = document.createElement('tr');
+            const wh = whMap[shelf.warehouse_id];
+            tr.innerHTML = `
+                <td>${esc(shelf.name)}</td>
+                <td>${wh ? esc(wh.name) : '-'}</td>
+                <td>
+                    <button class="btn-warning" data-action="edit-shelf" data-id="${shelf.id}" title="تعديل">✏️</button>
+                    <button class="btn-danger" data-action="delete-shelf" data-id="${shelf.id}" title="حذف">🗑️</button>
+                </td>
+            `;
+            elements.shelvesTableBody.appendChild(tr);
+        });
+    }
+
     function renderTransactionsTable() {
         elements.transactionsTableBody.innerHTML = '';
         const itemsMap = Object.fromEntries(state.items.map(i => [i.id, i]));
@@ -2468,6 +2564,8 @@ function renderItemsTable() {
         }
         if (action === 'edit-warehouse') editWarehouse(id);
         if (action === 'delete-warehouse') deleteWarehouse(id);
+        if (action === 'edit-shelf') editShelf(id);
+        if (action === 'delete-shelf') deleteShelf(id);
         if (action === 'delete-transaction') deleteTransaction(id);
         if (action === 'edit-transaction') editTransaction(id);
         if (action === 'edit-user') {
@@ -2909,6 +3007,49 @@ function resetItemForm() {
         const modal = document.getElementById('warehouse-modal');
         modal.style.display = 'none';
         resetWarehouseForm();
+    }
+
+    // --- Shelf Modal Functions ---
+
+    function openShelfModal(isEdit = false) {
+        const modal = document.getElementById('shelf-modal');
+        const title = document.getElementById('shelf-modal-title');
+        title.textContent = isEdit ? '✏️ تعديل رف' : '➕ إضافة رف جديد';
+        modal.style.display = 'flex';
+        if (!isEdit) {
+            resetShelfForm();
+        } else {
+            // سيتم ملء النموذج عند معالجة حدث النقر على زر التعديل
+        }
+    }
+
+    function closeShelfModal() {
+        const modal = document.getElementById('shelf-modal');
+        modal.style.display = 'none';
+        resetShelfForm();
+    }
+
+    function resetShelfForm() {
+        elements.shelfId.value = '';
+        elements.shelfName.value = '';
+        elements.shelfWarehouse.value = '';
+        updateShelfWarehouseSelects();
+    }
+
+    function updateShelfWarehouseSelects() {
+        const select = elements.shelfWarehouse;
+        if (!select) return;
+        const currentValue = select.value;
+        select.innerHTML = '<option value="">اختر المستودع</option>';
+        state.warehouses.forEach(wh => {
+            const option = document.createElement('option');
+            option.value = wh.id;
+            option.textContent = wh.name;
+            select.appendChild(option);
+        });
+        if (currentValue) {
+            select.value = currentValue;
+        }
     }
 
     function openUserModal(isEdit = false, user = null) {

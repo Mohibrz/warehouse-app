@@ -21,6 +21,7 @@ from .routers import (
     items,
     notifications,
     reports,
+    shelves,
     stock,
     transactions,
     users,
@@ -103,6 +104,7 @@ app.include_router(notifications.router)
 app.include_router(reports.router)
 app.include_router(activity_logs.router)
 app.include_router(backup.router)
+app.include_router(shelves.router)
 
 @app.post("/auth/login", response_model=TokenResponse)
 def login(form_data: LoginRequest, db: Session = Depends(get_db)):

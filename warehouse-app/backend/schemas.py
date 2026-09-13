@@ -45,6 +45,31 @@ class TokenResponse(BaseModel):
 
 # ---- Warehouse Schemas ----
 
+class ShelfCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    warehouse_id: int = Field(..., gt=0)
+
+    class Config:
+        json_schema_extra = {
+            "example": {"name": "رف A-01", "warehouse_id": 1}
+        }
+
+
+class ShelfUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    warehouse_id: Optional[int] = Field(None, gt=0)
+
+
+class ShelfResponse(BaseModel):
+    id: int
+    name: str
+    warehouse_id: int
+    warehouse_name: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
 class WarehouseCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     location: Optional[str] = Field(None, max_length=200)
@@ -103,6 +128,7 @@ class ItemCreate(BaseModel):
     min_stock: float = Field(default=0.0, ge=0)
     price: float = Field(default=0.0, ge=0)
     warehouse_id: Optional[int] = Field(None, gt=0)
+    shelf_id: Optional[int] = Field(None, gt=0)  # ✅ حقل جديد للرف
     initial_quantity: float = Field(default=0.0, ge=0)
     transaction_notes: Optional[str] = Field(None, max_length=500)
     # ✅ حقل جديد
@@ -130,6 +156,7 @@ class ItemUpdate(BaseModel):
     min_stock: Optional[float] = Field(None, ge=0)
     price: Optional[float] = Field(None, ge=0)
     warehouse_id: Optional[int] = Field(None, gt=0)
+    shelf_id: Optional[int] = Field(None, gt=0)  # ✅ حقل جديد للرف
     # ✅ حقل جديد
     image_path: Optional[str] = None
 
@@ -143,6 +170,7 @@ class ItemResponse(BaseModel):
     min_stock: float
     price: float
     warehouse_id: Optional[int]
+    shelf_id: Optional[int] = None  # ✅ حقل جديد للرف
     # ✅ حقل جديد
     image_path: Optional[str] = None
 

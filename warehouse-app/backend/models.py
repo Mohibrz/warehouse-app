@@ -37,6 +37,18 @@ class Warehouse(Base):
     items = relationship("Item", back_populates="warehouse", cascade="all, delete-orphan")
     stock = relationship("Stock", back_populates="warehouse", cascade="all, delete-orphan")
     transactions = relationship("Transaction", back_populates="warehouse", foreign_keys="Transaction.warehouse_id")
+    shelves = relationship("Shelf", back_populates="warehouse", cascade="all, delete-orphan")
+
+
+class Shelf(Base):
+    __tablename__ = "shelves"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)  # اسم/رقم الرف
+    warehouse_id = Column(Integer, ForeignKey("warehouses.id"), nullable=False)
+
+    warehouse = relationship("Warehouse", back_populates="shelves")
+    items = relationship("Item", back_populates="shelf")
 
 
 class Category(Base):
@@ -60,12 +72,14 @@ class Item(Base):
     min_stock = Column(Float, default=0.0)
     price = Column(Float, default=0.0)
     warehouse_id = Column(Integer, ForeignKey("warehouses.id"), nullable=True)
+    shelf_id = Column(Integer, ForeignKey("shelves.id"), nullable=True)  # ✅ حقل جديد للرف
     
     # ✅ حقل جديد للصورة
     image_path = Column(String, nullable=True)
     
     warehouse = relationship("Warehouse", back_populates="items")
     category = relationship("Category", back_populates="items")
+    shelf = relationship("Shelf", back_populates="items")
     stock = relationship("Stock", back_populates="item", cascade="all, delete-orphan")
     transactions = relationship("Transaction", back_populates="item")
 

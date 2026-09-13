@@ -48,6 +48,7 @@
             <button class="nav-btn" data-section="items">الأصناف</button>
             <button class="nav-btn" data-section="categories">🏷️ الفئات</button>
             <button class="nav-btn" data-section="warehouses">المستودعات</button>
+            <button class="nav-btn" data-section="shelves">📚 الأرفف</button>
             <button class="nav-btn" data-section="transactions">الحركات</button>
             <button class="nav-btn" data-section="stock">المخزون</button>
             <button class="nav-btn" data-section="alerts">التنبيهات</button>
@@ -312,6 +313,54 @@
                         <div class="form-buttons">
                             <button type="submit" class="btn-primary">💾 حفظ</button>
                             <button type="button" id="cancel-warehouse-btn" class="btn-secondary">إلغاء</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- الأرفف -->
+            <section id="shelves" class="content-section" style="display: none;">
+                <h2>📚 إدارة الأرفف</h2>
+                <button class="btn-primary" id="show-add-shelf-btn">➕ إضافة رف جديد</button>
+                <div class="search-bar" style="margin: 1rem 0;">
+                    <input type="text" id="shelf-search" placeholder="🔍 بحث بالاسم أو المستودع..." style="width: 100%; padding: 10px 14px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.95rem;">
+                </div>
+                <div id="shelves-table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>الاسم</th>
+                                <th>المستودع</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="shelves-table-body"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- نافذة منبثقة لإضافة/تعديل رف -->
+            <div id="shelf-modal" class="modal-overlay" style="display: none;">
+                <div class="modal-container">
+                    <div class="modal-header">
+                        <h3 id="shelf-modal-title">إضافة رف جديد</h3>
+                        <button class="modal-close-btn" id="close-shelf-modal">×</button>
+                    </div>
+                    <form id="shelf-form" class="modal-body">
+                        <input type="hidden" id="shelf-id">
+                        <div class="form-group">
+                            <label for="shelf-name">اسم الرف *</label>
+                            <input type="text" id="shelf-name" required placeholder="مثال: A-01">
+                        </div>
+                        <div class="form-group">
+                            <label for="shelf-warehouse">المستودع *</label>
+                            <select id="shelf-warehouse" required>
+                                <option value="">اختر المستودع</option>
+                            </select>
+                        </div>
+                        <div class="form-buttons">
+                            <button type="submit" class="btn-primary">💾 حفظ</button>
+                            <button type="button" id="cancel-shelf-btn" class="btn-secondary">إلغاء</button>
                         </div>
                     </form>
                 </div>
