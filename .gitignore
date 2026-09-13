@@ -1,71 +1,40 @@
 ```
-# Python
+# Dependencies
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-.Python
-env/
-venv/
 .venv/
-.ENV
-.ENV.local
+venv/
+env/
 .env
 .env.local
 .env.*
-venv.bak/
-.venv.bak/
 
-# Build and distribution artifacts
-build/
+# Build artifacts
 dist/
+build/
 *.egg-info/
-.eggs/
-pip-wheel-metadata/
-
-# Testing
-.coverage
-htmlcov/
-.coverage.*
-.cache/
-.pytest_cache/
-.hypothesis/
-
-# IDE and editor files
-.vscode/
-.idea/
-*.swp
-*.swo
-*.tmp
-
-# OS generated files
-.DS_Store
-Thumbs.db
 
 # Logs
 *.log
 
-# Compressed files
-*.zip
-*.gz
-*.tar
-*.tgz
-*.bz2
-*.xz
-*.7z
-*.rar
-*.zst
-*.lz4
-*.lzh
-*.cab
-*.arj
-*.rpm
-*.deb
-*.Z
-*.lz
-*.lzo
-*.tar.gz
-*.tar.bz2
-*.tar.xz
-*.tar.zst
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Coverage
+.coverage
+coverage/
+htmlcov/
+
+# Testing
+.pytest_cache/
+.mypy_cache/
 ```

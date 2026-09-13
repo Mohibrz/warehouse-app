@@ -36,6 +36,7 @@ document.addEventListener('DOMContentLoaded', function() {
         itemMinStock: document.getElementById('item-min-stock'),
         itemPrice: document.getElementById('item-price'),
         itemWarehouse: document.getElementById('item-warehouse'),
+        itemShelf: document.getElementById('item-shelf'),
         showAddItemBtn: document.getElementById('show-add-item-btn'),
         cancelItemBtn: document.getElementById('cancel-item-btn'),
 
@@ -767,13 +768,15 @@ themeToggle.addEventListener('click', () => {
 
             const id = elements.itemId.value;
             const categoryValue = elements.itemCategory.value;
+            const shelfValue = elements.itemShelf.value;
             const data = {
                 name: itemName,
                 category_id: categoryValue ? parseInt(categoryValue) : null,
                 unit: elements.itemUnit.value.trim() || 'وحدة',
                 min_stock: parseFloat(elements.itemMinStock.value) || 0,
                 price: parseFloat(elements.itemPrice.value) || 0,
-                warehouse_id: parseInt(elements.itemWarehouse.value) || null
+                warehouse_id: parseInt(elements.itemWarehouse.value) || null,
+                shelf_id: shelfValue ? parseInt(shelfValue) : null
             };
 
             // إضافة الكمية الابتدائية فقط عند إضافة صنف جديد (وليس تعديل)
@@ -2534,7 +2537,35 @@ function renderItemsTable() {
                 select.appendChild(opt);
             });
             select.value = currentValue;
+            
+            // إضافة حدث change لتحديث الأرفف عند تغيير المستودع في نموذج الأصناف
+            if (select === elements.itemWarehouse) {
+                select.onchange = updateShelfSelect;
+            }
         });
+        // تحديث قائمة الأرفف عند تغيير المستودع
+        updateShelfSelect();
+    }
+    
+    function updateShelfSelect() {
+        const shelfSelect = elements.itemShelf;
+        if (!shelfSelect) return;
+        const warehouseId = elements.itemWarehouse.value;
+        const currentShelfValue = shelfSelect.value;
+        
+        shelfSelect.innerHTML = '<option value="">اختر الرف (اختياري)</option>';
+        
+        if (warehouseId) {
+            const filteredShelves = state.shelves.filter(s => s.warehouse_id == warehouseId);
+            filteredShelves.forEach(shelf => {
+                const opt = document.createElement('option');
+                opt.value = shelf.id;
+                opt.textContent = shelf.name;
+                shelfSelect.appendChild(opt);
+            });
+        }
+        
+        shelfSelect.value = currentShelfValue;
     }
 
     function updateItemSelect() {
@@ -2590,6 +2621,7 @@ async function editItem(id) {
         elements.itemMinStock.value = item.min_stock || 0;
         elements.itemPrice.value = item.price || 0;
         elements.itemWarehouse.value = item.warehouse_id || '';
+        elements.itemShelf.value = item.shelf_id || '';
         
         // ✅ عرض الصورة الحالية إن وجدت
         const imagePreview = document.getElementById('item-image-preview');
@@ -2864,6 +2896,47 @@ async function editItem(id) {
         }
     }
 
+    async function editShelf(id) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/shelves/${id}`, {headers: getAuthHeaders()});
+            if (!response.ok) throw new Error(await extractApiError(response, 'تعذر تحميل الرف'));
+            const shelf = await response.json();
+            elements.shelfId.value = shelf.id;
+            elements.shelfName.value = shelf.name;
+            elements.shelfWarehouse.value = shelf.warehouse_id || '';
+            openShelfModal(true);
+        } catch (error) {
+            showMessage(error.message, 'error');
+        }
+    }
+
+    async function deleteShelf(id) {
+        const confirmed = await showConfirmDialog(
+            '⚠️ تأكيد الحذف',
+            'هل أنت متأكد من حذف هذا الرف؟',
+            'حذف',
+            'إلغاء'
+        );
+        if (!confirmed) return;
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/shelves/${id}`, {method: 'DELETE', headers: getAuthHeaders()});
+            if (!response.ok) {
+                const errorMsg = await extractApiError(response, 'فشل الحذف');
+                if (errorMsg.includes('حركة') || errorMsg.includes('حركات') || errorMsg.includes('صنف') || errorMsg.includes('أصناف')) {
+                    showMessage('⚠️ لا يمكن الحذف\\n\\n' + errorMsg + '\\n\\nالحل: احذف الأصناف أو الحركات المرتبطة بهذا الرف أولاً.', 'error');
+                } else {
+                    showMessage(errorMsg, 'error');
+                }
+                return;
+            }
+            showMessage('تم حذف الرف بنجاح');
+            await loadShelves();
+        } catch (error) {
+            showMessage(error.message, 'error');
+        }
+    }
+
     // --- Form Reset ---
 
 function resetItemForm() {
@@ -2960,6 +3033,7 @@ function resetItemForm() {
         // Ensure dropdowns are always up-to-date
         updateWarehouseSelects();
         updateCategorySelects();
+        updateShelfSelect();
     }
 
     function closeItemModal() {
