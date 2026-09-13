@@ -1,0 +1,1 @@
+- [Warehouse App Status](warehouse-app-status.md) — state of d:\Kilo\warehouse-app (Arabic WMS)

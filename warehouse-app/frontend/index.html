@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام إدارة المخازن</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- نافذة تسجيل الدخول -->
+    <div id="login-modal" class="login-modal" style="display: flex;">
+        <div class="login-container">
+            <h1>نظام إدارة المخازن</h1>
+            <p>الرجاء تسجيل الدخول للمتابعة</p>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="username">اسم المستخدم</label>
+                    <input type="text" id="username" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="password">كلمة المرور</label>
+                    <input type="password" id="password" required autocomplete="current-password">
+                </div>
+                <div id="login-error" class="login-error"></div>
+                <button type="submit" id="login-btn">تسجيل الدخول</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- الواجهة الرئيسية -->
+    <div id="app-container" style="display: none;">
+        <header class="header">
+            <h1>نظام إدارة المخازن</h1>
+            <div class="user-info">
+                <span id="current-username">جاري التحميل...</span>
+                <button id="theme-toggle" title="تبديل الوضع">🌙</button>
+                <button id="settings-btn" title="الإعدادات">⚙️</button>
+                <button id="logout-btn">تسجيل الخروج</button>
+                <button id="notifications-btn" title="الإشعارات" class="notification-btn">
+                    🔔 <span id="notification-count" class="notification-badge">0</span>
+                </button>
+            </div>
+        </header>
+
+        <nav class="navbar">
+            <button class="nav-btn active" data-section="dashboard">الرئيسية</button>
+            <button class="nav-btn" data-section="items">الأصناف</button>
+            <button class="nav-btn" data-section="categories">🏷️ الفئات</button>
+            <button class="nav-btn" data-section="warehouses">المستودعات</button>
+            <button class="nav-btn" data-section="transactions">الحركات</button>
+            <button class="nav-btn" data-section="stock">المخزون</button>
+            <button class="nav-btn" data-section="alerts">التنبيهات</button>
+            <button class="nav-btn" data-section="users" id="users-nav-btn" style="display: none;">المستخدمون</button>
+            <button class="nav-btn" data-section="activity" id="activity-nav-btn" style="display: none;">📋 سجل النشاطات</button>
+            <button class="nav-btn" data-section="backup" id="backup-nav-btn" style="display: none;">💾 النسخ الاحتياطي</button>
+            <button class="nav-btn" data-section="reports" id="reports-nav-btn" style="display: none;">📊 التقارير</button>
+            <button class="nav-btn" data-section="barcodes" id="barcodes-nav-btn">🖨️ طباعة الباركود</button>
+            <button class="nav-btn" data-section="scanner">📷 مسح الباركود</button>
+            <button class="nav-btn" data-section="credit">📋 المواد بالذمة</button>
+            <button class="nav-btn" data-section="damaged">⚠️ المواد التالفة</button>
+            <a href="/health-dashboard" target="_blank" class="nav-btn" id="health-nav-btn" style="display: none;">📊 مراقبة النظام</a>
+        </nav>
+
+        <main class="container">
+            <!-- لوحة التحكم -->
+            <section id="dashboard" class="content-section">
+                <h2>لوحة التحكم</h2>
+                <div class="stats-grid">
+                    <div class="stat-card stat-items">
+                        <h3>📦 إجمالي الأصناف</h3>
+                        <span id="total-items">0</span>
+                    </div>
+                    <div class="stat-card stat-stock">
+                        <h3>📊 إجمالي المخزون</h3>
+                        <span id="total-stock">0</span>
+                    </div>
+                    <div class="stat-card stat-alerts">
+                        <h3>⚠️ تنبيهات المخزون المنخفض</h3>
+                        <span id="low-stock-count">0</span>
+                    </div>
+                    <div class="stat-card stat-transactions">
+                        <h3>🔄 إجمالي الحركات</h3>
+                        <span id="total-transactions">0</span>
+                    </div>
+                </div>
+
+                <div class="charts-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 2rem 0;">
+                    <div class="chart-container" style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                        <h3>📊 الحركات حسب النوع</h3>
+                        <canvas id="transactions-chart"></canvas>
+                    </div>
+                    <div class="chart-container" style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                        <h3>📈 المخزون حسب المستودع</h3>
+                        <canvas id="stock-chart"></canvas>
+                    </div>
+                    <div class="chart-container" style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); grid-column: 1/-1;">
+                        <h3>📉 آخر 7 أيام - حركات يومية</h3>
+                        <canvas id="daily-chart"></canvas>
+                    </div>
+                </div>
+
+                <div class="recent-movements">
+                    <h3>آخر الحركات</h3>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>التاريخ</th>
+                                <th>الصنف</th>
+                                <th>المستودع</th>
+                                <th>النوع</th>
+                                <th>الكمية</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recent-movements-body"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- الأصناف -->
+            <section id="items" class="content-section" style="display: none;">
+                <h2>إدارة الأصناف</h2>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.5rem;">
+                    <button class="btn-primary" id="show-add-item-btn">➕ إضافة صنف جديد</button>
+                    <button class="btn-secondary" id="export-items-excel">📊 تصدير Excel</button>
+                    <button class="btn-secondary" id="print-items-btn">🖨️ طباعة</button>
+                </div>
+                <div class="search-bar" style="margin: 1rem 0;">
+                    <input type="text" id="item-search" placeholder="🔍 بحث بالاسم أو الرمز أو الفئة..." style="width: 100%; padding: 10px 14px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.95rem;">
+                </div>
+                <div id="items-table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>الصورة</th> <!-- ✅ تم إضافة عمود الصورة هنا -->
+                                <th>رمز الصنف</th>
+                                <th>الاسم</th>
+                                <th>الفئة</th>
+                                <th>الوحدة</th>
+                                <th>الحد الأدنى</th>
+                                <th>السعر</th>
+                                <th>المستودع</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="items-table-body"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- نافذة منبثقة لإضافة/تعديل صنف -->
+            <div id="item-modal" class="modal-overlay" style="display: none;">
+                <div class="modal-container">
+                    <div class="modal-header">
+                        <h3 id="item-modal-title">إضافة صنف جديد</h3>
+                        <button class="modal-close-btn" id="close-item-modal">×</button>
+                    </div>
+                    <form id="item-form" class="modal-body">
+                        <input type="hidden" id="item-id">
+                        <input type="hidden" id="item-existing-image-path" value=""> <!-- ✅ لتتبع الصورة الحالية عند التعديل -->
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="item-sku">رمز الصنف (SKU)</label>
+                                <div class="input-with-button">
+                                    <input type="text" id="item-sku" placeholder="اتركه فارغاً للتوليد التلقائي">
+                                    <button type="button" id="generate-sku-btn" class="btn-secondary">🎲 توليد تلقائي</button>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="item-name">اسم الصنف *</label>
+                                <input type="text" id="item-name" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="item-category">الفئة</label>
+                                <select id="item-category">
+                                    <option value="">اختر الفئة</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="item-unit">الوحدة</label>
+                                <input type="text" id="item-unit" value="وحدة">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="item-min-stock">الحد الأدنى للمخزون</label>
+                                <input type="number" id="item-min-stock" step="0.01" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label for="item-price">السعر (د.ع)</label>
+                                <input type="number" id="item-price" step="0.01" min="0">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="item-warehouse">المستودع</label>
+                            <select id="item-warehouse">
+                                <option value="">اختر المستودع</option>
+                            </select>
+                        </div>
+
+                        <!-- ✅ قسم رفع صورة الصنف الجديد -->
+                        <div class="form-group" style="margin-top: 1rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+                            <label for="item-image-input">📷 صورة الصنف</label>
+                            <input type="file" id="item-image-input" accept="image/jpeg,image/png,image/webp,image/gif" style="padding: 8px; width: 100%;">
+                            <small style="color: var(--text-muted); display: block; margin-top: 0.25rem;">الحد الأقصى: 5MB | الأنواع: JPG, PNG, WebP, GIF</small>
+                            
+                            <div id="item-image-preview" style="margin-top: 10px; display: none; text-align: center;">
+                                <img id="item-preview-img" src="" alt="معاينة الصورة" style="max-width: 150px; max-height: 150px; border-radius: 8px; border: 2px solid var(--border-color); object-fit: cover;">
+                                <br>
+                                <button type="button" id="remove-item-image-btn" class="btn-secondary" style="margin-top: 8px; font-size: 0.85rem; color: #e74c3c;">❌ إزالة الصورة</button>
+                            </div>
+                        </div>
+
+                        <div class="form-group" style="background: rgba(39, 174, 96, 0.08); padding: 1rem; border-radius: 8px; border-right: 4px solid var(--success-color); margin-top: 0.5rem;">
+                            <label for="item-initial-quantity" style="font-weight: 600; color: var(--success-color);">
+                                📦 إضافة كمية ابتدائية للمخزون
+                            </label>
+                            <div class="form-row" style="margin-top: 0.5rem;">
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <input type="number" id="item-initial-quantity" step="0.01" min="0" value="0" placeholder="0" style="font-size: 1.1rem; padding: 0.6rem;">
+                                </div>
+                                <div class="form-group" style="margin-bottom: 0; flex: 1;">
+                                    <input type="text" id="item-transaction-notes" placeholder="ملاحظات (اختياري)" style="width: 100%;">
+                                </div>
+                            </div>
+                            <small style="color: var(--text-muted); display: block; margin-top: 0.5rem;">
+                                💡 عند إدخال كمية أكبر من صفر، سيتم تسجيل حركة دخول تلقائياً وإضافتها للمخزون فوراً
+                            </small>
+                        </div>
+                        <div class="form-buttons">
+                            <button type="submit" class="btn-primary">💾 حفظ</button>
+                            <button type="button" id="cancel-item-btn" class="btn-secondary">إلغاء</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- نافذة منبثقة لعرض الباركود / QR Code -->
+            <div id="barcode-modal" class="modal-overlay" style="display: none;">
+                <div class="modal-container modal-container-narrow">
+                    <div class="modal-header">
+                        <h3>📷 الباركود / QR Code للصنف</h3>
+                        <button class="modal-close-btn" id="close-barcode-modal">×</button>
+                    </div>
+                    <div class="modal-body" style="text-align: center;">
+                        <h4 id="barcode-item-name" style="margin-bottom: 0.5rem; color: var(--primary-color);"></h4>
+                        <p id="barcode-item-sku" style="margin-bottom: 1rem; font-family: monospace; font-size: 1.1rem;"></p>
+
+                        <div class="code-tabs">
+                            <button class="code-tab active" data-tab="barcode" id="tab-barcode">📊 باركود (1D)</button>
+                            <button class="code-tab" data-tab="qrcode" id="tab-qrcode">🔲 QR Code (2D)</button>
+                        </div>
+
+                        <div id="barcode-display" class="code-display active" style="background: white; padding: 1.5rem; border: 1px solid var(--border-color); border-radius: 8px; display: inline-block; margin: 1rem 0;">
+                            <svg id="barcode-svg"></svg>
+                        </div>
+
+                        <div id="qrcode-display" class="code-display" style="background: white; padding: 1.5rem; border: 1px solid var(--border-color); border-radius: 8px; display: none; margin: 1rem 0;">
+                            <div id="qrcode-canvas"></div>
+                        </div>
+
+                        <div class="form-buttons" style="justify-content: center; margin-top: 1.5rem;">
+                            <button class="btn-primary" id="print-barcode-btn">🖨️ طباعة</button>
+                            <button class="btn-secondary" id="download-barcode-btn">📥 تحميل</button>
+                            <button class="btn-secondary" id="close-barcode-btn">إغلاق</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- المستودعات -->
+            <section id="warehouses" class="content-section" style="display: none;">
+                <h2>إدارة المستودعات</h2>
+                <button class="btn-primary" id="show-add-warehouse-btn">إضافة مستودع جديد</button>
+                <div class="search-bar" style="margin: 1rem 0;">
+                    <input type="text" id="warehouse-search" placeholder="🔍 بحث بالاسم أو الموقع..." style="width: 100%; padding: 10px 14px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.95rem;">
+                </div>
+                <div id="warehouses-table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>الاسم</th>
+                                <th>الموقع</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="warehouses-table-body"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- نافذة منبثقة لإضافة/تعديل مستودع -->
+            <div id="warehouse-modal" class="modal-overlay" style="display: none;">
+                <div class="modal-container">
+                    <div class="modal-header">
+                        <h3 id="warehouse-modal-title">إضافة مستودع جديد</h3>
+                        <button class="modal-close-btn" id="close-warehouse-modal">×</button>
+                    </div>
+                    <form id="warehouse-form" class="modal-body">
+                        <input type="hidden" id="warehouse-id">
+                        <div class="form-group">
+                            <label for="warehouse-name">اسم المستودع *</label>
+                            <input type="text" id="warehouse-name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="warehouse-location">الموقع</label>
+                            <input type="text" id="warehouse-location" placeholder="مثل: الرياض، حي العليا">
+                        </div>
+                        <div class="form-buttons">
+                            <button type="submit" class="btn-primary">💾 حفظ</button>
+                            <button type="button" id="cancel-warehouse-btn" class="btn-secondary">إلغاء</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- الفئات -->
+            <section id="categories" class="content-section" style="display: none;">
+                <h2>🏷️ إدارة الفئات</h2>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem;">
+                    <button class="btn-primary" id="show-add-category-btn">➕ إضافة فئة جديدة</button>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>اسم الفئة</th>
+                                <th>الوصف</th>
+                                <th>عدد الأصناف</th>
+                                <th>تاريخ الإنشاء</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="categories-table-body">
+                            <tr><td colspan="6" style="text-align: center; padding: 2rem;">جاري التحميل...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- نافذة إضافة/تعديل الفئة -->
+            <div id="category-modal" class="modal-overlay" style="display: none;">
+                <div class="modal-content" style="max-width: 500px;">
+                    <div class="modal-header">
+                        <h3 id="category-modal-title">إضافة فئة جديدة</h3>
+                        <button class="modal-close-btn" id="close-category-modal">×</button>
+                    </div>
+                    <form id="category-form" class="modal-body">
+                        <input type="hidden" id="category-id">
+                        <div class="form-group">
+                            <label for="category-name">اسم الفئة *</label>
+                            <input type="text" id="category-name" required placeholder="مثال: إلكترونيات، أجهزة كهربائية">
+                        </div>
+                        <div class="form-group">
+                            <label for="category-description">الوصف</label>
+                            <textarea id="category-description" rows="3" placeholder="وصف اختياري للفئة"></textarea>
+                        </div>
+                        <div class="form-buttons">
+                            <button type="submit" class="btn-primary">💾 حفظ</button>
+                            <button type="button" id="cancel-category-btn" class="btn-secondary">إلغاء</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- الحركات -->
+            <section id="transactions" class="content-section" style="display: none;">
+                <h2>حركات المخزون</h2>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.5rem;">
+                    <button class="btn-primary" id="show-add-transaction-btn">تسجيل حركة جديدة</button>
+                    <button class="btn-secondary" id="export-transactions-excel">📊 تصدير Excel</button>
+                    <button class="btn-secondary" id="print-transactions-btn">🖨️ طباعة</button>
+                </div>
+                <div class="search-bar" style="margin: 1rem 0;">
+                    <input type="text" id="transaction-search" placeholder="🔍 بحث بالصنف أو المستودع..." style="width: 100%; padding: 10px 14px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.95rem;">
+                </div>
+                <div id="transactions-table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>التاريخ</th>
+                                <th>الصنف</th>
+                                <th>المستودع</th>
+                                <th>النوع</th>
+                                <th>الكمية</th>
+                                <th>الملاحظات</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactions-table-body"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- نافذة منبثقة لتسجيل حركة -->
+            <div id="transaction-modal" class="modal-overlay" style="display: none;">
+                <div class="modal-container">
+                    <div class="modal-header">
+                        <h3 id="transaction-modal-title">تسجيل حركة جديدة</h3>
+                        <button class="modal-close-btn" id="close-transaction-modal">×</button>
+                    </div>
+                    <form id="transaction-form" class="modal-body">
+                        <div class="form-group">
+                            <label for="transaction-item">الصنف *</label>
+                            <div class="input-with-button">
+                                <input type="text" id="transaction-item-search" placeholder="🔍 ابحث عن الصنف...">
+                                <button type="button" id="transaction-item-search-btn" class="btn-secondary" title="البحث عن الصنف">🔍</button>
+                                <select id="transaction-item" required>
+                                    <option value="">اختر الصنف</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="transaction-warehouse">المستودع *</label>
+                            <select id="transaction-warehouse" required>
+                                <option value="">اختر المستودع</option>
+                            </select>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="transaction-type">نوع الحركة *</label>
+                                <select id="transaction-type" required>
+                                    <option value="in">دخول</option>
+                                    <option value="out">خروج</option>
+                                    <option value="transfer">نقل</option>
+                                    <option value="adjustment">تعديل</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="transaction-quantity">الكمية *</label>
+                                <input type="number" id="transaction-quantity" step="0.01" min="0.01" required>
+                            </div>
+                        </div>
+                        <div class="form-group" id="transfer-target-row" style="display: none;">
+                            <label for="transaction-target-warehouse">مستودع الهدف (للنقل) *</label>
+                            <select id="transaction-target-warehouse">
+                                <option value="">اختر مستودع الهدف</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="transaction-notes">الملاحظات</label>
+                            <textarea id="transaction-notes" rows="2" placeholder="اختياري"></textarea>
+                        </div>
+                        <div class="form-buttons">
+                            <button type="submit" class="btn-primary">💾 حفظ</button>
+                            <button type="button" id="cancel-transaction-btn" class="btn-secondary">إلغاء</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- المخزون -->
+            <section id="stock" class="content-section" style="display: none;">
+                <h2>المخزون الحالي</h2>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.5rem;">
+                    <button class="btn-secondary" id="export-stock-excel">📊 تصدير Excel</button>
+                    <button class="btn-secondary" id="print-stock-btn">🖨️ طباعة</button>
+                </div>
+                <div class="search-bar" style="margin: 1rem 0;">
+                    <input type="text" id="stock-search" placeholder="🔍 بحث بالصنف أو المستودع..." style="width: 100%; padding: 10px 14px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.95rem;">
+                </div>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>الصنف</th>
+                            <th>رمز الصنف</th>
+                            <th>المستودع</th>
+                            <th>الكمية</th>
+                            <th>الحد الأدنى</th>
+                            <th>الحالة</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stock-table-body"></tbody>
+                </table>
+            </section>
+
+            <!-- إدارة المستخدمين -->
+            <section id="users" class="content-section" style="display: none;">
+                <h2>إدارة المستخدمين</h2>
+                <button class="btn-primary" id="show-add-user-btn">➕ إضافة مستخدم جديد</button>
+                <div id="users-table-container" style="margin-top: 1rem;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>اسم المستخدم</th>
+                                <th>الصلاحية</th>
+                                <th>تاريخ الإنشاء</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-table-body"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- سجل النشاطات -->
+            <section id="activity" class="content-section" style="display: none;">
+                <h2>سجل النشاطات</h2>
+                <p style="color: #6c757d; margin-bottom: 1rem;">جميع العمليات التي تمت في النظام</p>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>التوقيت</th>
+                            <th>المستخدم</th>
+                            <th>العملية</th>
+                            <th>الكيان</th>
+                            <th>التفاصيل</th>
+                        </tr>
+                    </thead>
+                    <tbody id="activity-table-body"></tbody>
+                </table>
+            </section>
+
+            <!-- طباعة الباركود المجمّعة -->
+            <section id="barcodes" class="content-section" style="display: none;">
+                <h2>طباعة الباركود المجمّعة</h2>
+                <p style="color: #6c757d; margin-bottom: 1rem;">اختر الأصناف المراد طباعة باركوداتها</p>
+                <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+                    <button class="btn-primary" id="print-selected-barcodes">🖨️ طباعة المختارة</button>
+                    <button class="btn-secondary" id="select-all-barcodes">☑️ اختيار الكل</button>
+                    <button class="btn-secondary" id="deselect-all-barcodes">⬜ إلغاء الكل</button>
+                </div>
+                <div class="search-bar" style="margin-bottom: 1rem;">
+                    <input type="text" id="barcode-search" placeholder="🔍 بحث..." style="width: 100%; padding: 10px 14px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.95rem;">
+                </div>
+                <div id="barcode-cards-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;"></div>
+            </section>
+
+            <!-- نافذة معاينة الطباعة -->
+            <div id="barcode-print-modal" class="modal-overlay" style="display: none;">
+                <div class="modal-container" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
+                    <div class="modal-header">
+                        <h3>معاينة الطباعة</h3>
+                        <button class="modal-close-btn" id="close-barcode-print-modal">×</button>
+                    </div>
+                    <div id="barcode-print-preview" style="padding: 1rem;"></div>
+                    <div class="form-buttons" style="padding: 1rem; justify-content: center;">
+                        <button class="btn-primary" id="do-print-barcodes">🖨️ طباعة</button>
+                        <button class="btn-secondary" id="cancel-print-barcodes">إلغاء</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- النسخ الاحتياطي -->
+            <section id="backup" class="content-section" style="display: none;">
+                <h2>النسخ الاحتياطي</h2>
+                <p style="color: #6c757d; margin-bottom: 1.5rem;">إنشاء نسخة احتياطية من قاعدة البيانات</p>
+                <div style="background: white; padding: 2rem; border-radius: 12px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                    <div style="font-size: 4rem; margin-bottom: 1rem;">💾</div>
+                    <p style="margin-bottom: 1.5rem;">اضغط الزر التالي لإنشاء نسخة احتياطية من قاعدة البيانات</p>
+                    <button class="btn-primary btn-lg" id="create-backup-btn" style="padding: 1rem 2rem; font-size: 1.1rem;">
+                        📦 إنشاء نسخة احتياطية
+                    </button>
+                    <div id="backup-result" style="margin-top: 1.5rem;"></div>
+                </div>
+            </section>
+
+            <!-- التقارير المتقدمة -->
+            <section id="reports" class="content-section" style="display: none;">
+                <h2>التقارير المتقدمة</h2>
+                <div class="reports-tabs" style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+                    <button class="btn-secondary report-tab active" data-report="inventory-value">💰 قيمة المخزون</button>
+                    <button class="btn-secondary report-tab" data-report="top-moving">📈 الأصناف الأكثر حركة</button>
+                    <button class="btn-secondary report-tab" data-report="warehouse-utilization">🏭 استخدام المستودعات</button>
+                    <button class="btn-secondary report-tab" data-report="category-summary">📂 ملخص الفئات</button>
+                    <button class="btn-secondary report-tab" data-report="daily-movements">📅 الحركات اليومية</button>
+                    <button class="btn-secondary report-tab" data-report="user-activity">👥 نشاط المستخدمين</button>
+                </div>
+                <div id="reports-content">
+                    <div class="report-filters" id="report-filters">
+                        <div>
+                            <label>الفترة الزمنية:</label>
+                            <select id="report-days" onchange="fetchReport(currentReport)">
+                                <option value="7">آخر 7 أيام</option>
+                                <option value="30" selected>آخر 30 يوم</option>
+                                <option value="90">آخر 90 يوم</option>
+                                <option value="180">آخر 180 يوم</option>
+                                <option value="365">السنة كاملة</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="report-data" id="report-data">
+                        <div class="report-loading">جاري تحميل البيانات...</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- نافذة منبثقة لإضافة/تعديل مستخدم -->
+            <div id="user-modal" class="modal-overlay" style="display: none;">
+                <div class="modal-container">
+                    <div class="modal-header">
+                        <h3 id="user-modal-title">إضافة مستخدم جديد</h3>
+                        <button class="modal-close-btn" id="close-user-modal">×</button>
+                    </div>
+                    <form id="user-form" class="modal-body">
+                        <input type="hidden" id="user-id">
+                        <div class="form-group">
+                            <label for="user-username">اسم المستخدم *</label>
+                            <input type="text" id="user-username" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="user-password">كلمة المرور <span id="password-required">(للمستخدمين الجدد)</span></label>
+                            <input type="password" id="user-password">
+                        </div>
+                        <div class="form-group">
+                            <label for="user-role">الصلاحية *</label>
+                            <select id="user-role" required>
+                                <option value="viewer">مشاهد (viewer)</option>
+                                <option value="staff">موظف (staff)</option>
+                                <option value="admin">مدير (admin)</option>
+                            </select>
+                        </div>
+                        <div class="form-buttons">
+                            <button type="submit" class="btn-primary">💾 حفظ</button>
+                            <button type="button" id="cancel-user-btn" class="btn-secondary">إلغاء</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- الإعدادات -->
+            <div id="settings-modal" class="modal-overlay" style="display: none;">
+                <div class="modal-container">
+                    <div class="modal-header">
+                        <h3>⚙️ الإعدادات</h3>
+                        <button class="modal-close-btn" id="close-settings-modal">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="setting-refresh-interval">فترة التحديث التلقائي (بالثواني)</label>
+                            <select id="setting-refresh-interval">
+                                <option value="0">معطل</option>
+                                <option value="15">15 ثانية</option>
+                                <option value="30" selected>30 ثانية</option>
+                                <option value="60">دقيقة واحدة</option>
+                                <option value="120">دقيقتان</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="setting-default-warehouse">المستودع الافتراضي</label>
+                            <select id="setting-default-warehouse">
+                                <option value="">-- لا يوجد --</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="setting-notifications-enabled" checked>
+                                تفعيل الإشعارات
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="setting-dark-mode-default">
+                                استخدام الوضع الداكن افتراضياً
+                            </label>
+                        </div>
+                        <div class="form-buttons">
+                            <button type="button" class="btn-primary" id="save-settings-btn">💾 حفظ الإعدادات</button>
+                            <button type="button" class="btn-secondary" id="cancel-settings-btn">إلغاء</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- التنبيهات -->
+            <section id="alerts" class="content-section" style="display: none;">
+                <h2>تنبيهات المخزون المنخفض</h2>
+                <div id="alerts-list"></div>
+            </section>
+
+            <!-- نافذة الإشعارات المنبثقة -->
+            <div id="notifications-modal" class="notifications-modal" style="display: none;">
+                <div class="notifications-container">
+                    <div class="notifications-header">
+                        <h3>الإشعارات</h3>
+                        <button class="notifications-close-btn" id="close-notifications-modal">×</button>
+                    </div>
+                    <div class="notifications-body" id="notifications-body">
+                        <div class="notifications-loading">جاري تحميل الإشعارات...</div>
+                    </div>
+                    <div class="notifications-footer">
+                        <button class="btn-secondary" id="mark-all-read">تعليم الكل كمقروء</button>
+                        <button class="btn-danger" id="dismiss-all">إلغاء الكل</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- مسح الباركود -->
+            <section id="scanner" class="content-section" style="display: none;">
+                <h2>📷 مسح الباركود</h2>
+                <p style="margin-bottom: 1rem; color: #6c757d;">استخدم الكاميرا لمسح باركود الصنف وعرض معلوماته أو إضافة حركة مخزون</p>
+
+                <div class="barcode-actions">
+                    <button class="btn-primary" id="start-scanner-btn">📷 تشغيل الكاميرا</button>
+                    <button class="btn-secondary" id="stop-scanner-btn" style="display: none;">إيقاف الكاميرا</button>
+                </div>
+
+                <div class="form-section" style="margin-top: 1rem; padding: 1rem; background: #f8f9fa; border-radius: 8px;">
+                    <h4 style="margin-top: 0;">⌨️ إدخال الباركود يدوياً</h4>
+                    <p style="font-size: 0.9rem; color: #6c757d; margin-bottom: 0.5rem;">أو أدخل رمز SKU/الباركود للبحث عن الصنف (مفيد إذا فشلت الكاميرا)</p>
+                    <form id="manual-lookup-form" style="display: flex; gap: 0.5rem;">
+                        <input type="text" id="manual-barcode" placeholder="أدخل رمز الباركود أو SKU" style="flex: 1; padding: 0.5rem; border: 1px solid #dee2e6; border-radius: 4px;">
+                        <button type="submit" class="btn-primary">بحث</button>
+                    </form>
+                </div>
+
+                <div id="scanner-container" style="margin: 1rem 0; display: none;">
+                    <div id="reader" style="width: 100%; max-width: 500px; margin: 0 auto; border: 2px solid #dee2e6; border-radius: 8px; overflow: hidden;"></div>
+                    <p id="scanner-status" style="text-align: center; margin-top: 0.5rem; color: #6c757d;">جاري البحث عن الباركود...</p>
+                </div>
+
+                <div id="barcode-result" class="barcode-result" style="display: none; margin-top: 1.5rem;">
+                    <div class="result-card">
+                        <h3 id="result-title">معلومات الصنف</h3>
+                        <div id="result-content"></div>
+                        <div class="result-actions" style="margin-top: 1rem;">
+                            <button class="btn-primary" id="quick-transaction-btn">⚡ حركة سريعة</button>
+                            <button class="btn-secondary" id="view-item-btn">عرض التفاصيل</button>
+                            <button class="btn-secondary" id="scan-again-btn">🔄 مسح آخر</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="quick-transaction-form" class="form-section" style="display: none; margin-top: 1.5rem;">
+                    <h3>⚡ حركة سريعة للصنف: <span id="quick-item-name"></span></h3>
+                    <form id="quick-tx-form">
+                        <input type="hidden" id="quick-item-id">
+                        <input type="hidden" id="quick-item-warehouse-id">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="quick-transaction-type">نوع الحركة *</label>
+                                <select id="quick-transaction-type" required>
+                                    <option value="in">دخول (+) مخزون</option>
+                                    <option value="out">خروج (-) مخزون</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="quick-transaction-quantity">الكمية *</label>
+                                <input type="number" id="quick-transaction-quantity" step="0.01" min="0.01" value="1" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="quick-transaction-notes">ملاحظات</label>
+                            <input type="text" id="quick-transaction-notes" placeholder="اختياري">
+                        </div>
+                        <div class="form-buttons">
+                            <button type="submit" class="btn-primary">حفظ الحركة</button>
+                            <button type="button" id="cancel-quick-tx-btn" class="btn-secondary">إلغاء</button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <!-- المواد بالذمة -->
+            <section id="credit" class="content-section" style="display: none;">
+                <h2>📋 المواد بالذمة</h2>
+                <p style="color: #6c757d; margin-bottom: 1rem;">تسجيل الأصناف التي أُعطيت كذمة (لا تُخصم من المخزون)</p>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.5rem;">
+                    <button class="btn-primary" id="show-add-credit-btn">➕ تسجيل ذمة جديدة</button>
+                    <button class="btn-secondary" id="export-credit-excel">📊 تصدير Excel</button>
+                    <button class="btn-secondary" id="print-credit-btn">🖨️ طباعة</button>
+                </div>
+                <div class="search-bar" style="margin: 1rem 0;">
+                    <input type="text" id="credit-search" placeholder="🔍 بحث بالصنف أو المستودع أو الجهة..." style="width: 100%; padding: 10px 14px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.95rem;">
+                </div>
+                <div id="credit-summary" class="stats-grid" style="margin-bottom: 1rem;">
+                    <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                        <h3>عدد سجلات الذمة</h3>
+                        <span id="credit-count" style="font-size: 1.5rem; font-weight: bold;">0</span>
+                    </div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
+                        <h3>إجمالي الكمية بالذمة</h3>
+                        <span id="credit-quantity" style="font-size: 1.5rem; font-weight: bold;">0</span>
+                    </div>
+                </div>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>التاريخ</th>
+                            <th>الصنف</th>
+                            <th>المستودع</th>
+                            <th>الكمية</th>
+                            <th>الجهة/الطرف</th>
+                            <th>الملاحظات</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="credit-table-body"></tbody>
+                </table>
+            </section>
+
+            <!-- نافذة منبثقة لتسجيل ذمة -->
+            <div id="credit-modal" class="modal-overlay" style="display: none;">
+                <div class="modal-container">
+                    <div class="modal-header">
+                        <h3 id="credit-modal-title">📋 تسجيل ذمة جديدة</h3>
+                        <button class="modal-close-btn" id="close-credit-modal">×</button>
+                    </div>
+                    <form id="credit-form" class="modal-body">
+                        <input type="hidden" id="credit-id">
+                        <div class="form-group">
+                            <label for="credit-item">الصنف *</label>
+                            <select id="credit-item" required>
+                                <option value="">اختر الصنف</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="credit-warehouse">المستودع *</label>
+                            <select id="credit-warehouse" required>
+                                <option value="">اختر المستودع</option>
+                            </select>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="credit-quantity-input">الكمية *</label>
+                                <input type="number" id="credit-quantity-input" step="0.01" min="0.01" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="credit-party">الجهة/الطرف</label>
+                                <input type="text" id="credit-party" placeholder="مثال: قسم الصيانة، أحمد، عميل">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="credit-notes">الملاحظات</label>
+                            <textarea id="credit-notes" rows="2" placeholder="اختياري - ملاحظات إضافية"></textarea>
+                        </div>
+                        <div class="form-buttons">
+                            <button type="submit" class="btn-primary">💾 حفظ</button>
+                            <button type="button" id="cancel-credit-btn" class="btn-secondary">إلغاء</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- المواد التالفة -->
+            <section id="damaged" class="content-section" style="display: none;">
+                <h2>⚠️ المواد التالفة</h2>
+                <p style="color: #6c757d; margin-bottom: 1rem;">تسجيل الأصناف التالفة (تُخصم من المخزون)</p>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.5rem;">
+                    <button class="btn-primary" id="show-add-damaged-btn">➕ تسجيل تلف جديد</button>
+                    <button class="btn-secondary" id="export-damaged-excel">📊 تصدير Excel</button>
+                    <button class="btn-secondary" id="print-damaged-btn">🖨️ طباعة</button>
+                </div>
+                <div class="search-bar" style="margin: 1rem 0;">
+                    <input type="text" id="damaged-search" placeholder="🔍 بحث بالصنف أو المستودع أو السبب..." style="width: 100%; padding: 10px 14px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.95rem;">
+                </div>
+                <div id="damaged-summary" class="stats-grid" style="margin-bottom: 1rem;">
+                    <div class="stat-card" style="background: linear-gradient(135deg, #f7971e 0%, #ffd200 100%); color: #333;">
+                        <h3>عدد سجلات التلف</h3>
+                        <span id="damaged-count" style="font-size: 1.5rem; font-weight: bold;">0</span>
+                    </div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%); color: white;">
+                        <h3>إجمالي الكمية التالفة</h3>
+                        <span id="damaged-quantity" style="font-size: 1.5rem; font-weight: bold;">0</span>
+                    </div>
+                </div>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>التاريخ</th>
+                            <th>الصنف</th>
+                            <th>المستودع</th>
+                            <th>الكمية</th>
+                            <th>السبب</th>
+                            <th>الملاحظات</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="damaged-table-body"></tbody>
+                </table>
+            </section>
+
+            <!-- نافذة منبثقة لتسجيل تلف -->
+            <div id="damaged-modal" class="modal-overlay" style="display: none;">
+                <div class="modal-container">
+                    <div class="modal-header">
+                        <h3 id="damaged-modal-title">⚠️ تسجيل تلف جديد</h3>
+                        <button class="modal-close-btn" id="close-damaged-modal">×</button>
+                    </div>
+                    <form id="damaged-form" class="modal-body">
+                        <input type="hidden" id="damaged-id">
+                        <div class="form-group">
+                            <label for="damaged-item">الصنف *</label>
+                            <select id="damaged-item" required>
+                                <option value="">اختر الصنف</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="damaged-warehouse">المستودع *</label>
+                            <select id="damaged-warehouse" required>
+                                <option value="">اختر المستودع</option>
+                            </select>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="damaged-quantity-input">الكمية *</label>
+                                <input type="number" id="damaged-quantity-input" step="0.01" min="0.01" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="damaged-reason">السبب *</label>
+                                <select id="damaged-reason" required>
+                                    <option value="">اختر السبب</option>
+                                    <option value="كسر">كسر</option>
+                                    <option value="تلف بسبب انتهاء الصلاحية">تلف بسبب انتهاء الصلاحية</option>
+                                    <option value="تلف بسبب سوء التخزين">تلف بسبب سوء التخزين</option>
+                                    <option value="تلف بسبب العوامل الجوية">تلف بسبب العوامل الجوية</option>
+                                    <option value="سرقة/فقدان">سرقة/فقدان</option>
+                                    <option value="عيب مصنعي">عيب مصنعي</option>
+                                    <option value="أخرى">أخرى</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group" id="damaged-other-reason-row" style="display: none;">
+                            <label for="damaged-other-reason">حدد السبب الآخر</label>
+                            <input type="text" id="damaged-other-reason" placeholder="اكتب السبب">
+                        </div>
+                        <div class="form-group">
+                            <label for="damaged-notes">ملاحظات إضافية</label>
+                            <textarea id="damaged-notes" rows="2" placeholder="اختياري - تفاصيل إضافية"></textarea>
+                        </div>
+                        <div class="form-buttons">
+                            <button type="submit" class="btn-primary">💾 حفظ</button>
+                            <button type="button" id="cancel-damaged-btn" class="btn-secondary">إلغاء</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs2@0.0.2/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/barcode.js"></script>
+    
+    <!-- ✅ كود JavaScript الخاص بإدارة صور الأصناف -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof initBarcodeScanner === 'function') {
+                initBarcodeScanner();
+            }
+
+            // 1. منطق معاينة الصورة عند الاختيار
+            const imageInput = document.getElementById('item-image-input');
+            const imagePreview = document.getElementById('item-image-preview');
+            const previewImg = document.getElementById('item-preview-img');
+            const removeImageBtn = document.getElementById('remove-item-image-btn');
+            const existingImagePathInput = document.getElementById('item-existing-image-path');
+
+            if (imageInput) {
+                imageInput.addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    if (file) {
+                        // التحقق من الحجم (5MB)
+                        if (file.size > 5 * 1024 * 1024) {
+                            alert('حجم الصورة يجب أن لا يتجاوز 5MB');
+                            imageInput.value = '';
+                            return;
+                        }
+                        const reader = new FileReader();
+                        reader.onload = function(ev) {
+                            previewImg.src = ev.target.result;
+                            imagePreview.style.display = 'block';
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            }
+
+            if (removeImageBtn) {
+                removeImageBtn.addEventListener('click', function() {
+                    imageInput.value = '';
+                    imagePreview.style.display = 'none';
+                    previewImg.src = '';
+                    existingImagePathInput.value = ''; // إعادة تعيين لتجنب الحذف الخاطئ
+                });
+            }
+
+            // 2. دالة مساعدة لعرض الصورة في الجدول (استخدم هذه الدالة في js/app.js عند رسم الجدول)
+            window.getItemImageCell = function(item) {
+                if (item.image_path) {
+                    return `<td>
+                        <img src="${item.image_path}" alt="${item.name}" 
+                             style="width: 50px; height: 50px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 1px solid #ddd;"
+                             onclick="showFullImage('${item.image_path}', '${item.name}')">
+                    </td>`;
+                } else {
+                    return `<td>
+                        <div style="width: 50px; height: 50px; background: #f0f0f0; border-radius: 6px; 
+                                    display: flex; align-items: center; justify-content: center; color: #aaa; font-size: 1.2rem;">
+                            📷
+                        </div>
+                    </td>`;
+                }
+            };
+
+            // 3. دالة لعرض الصورة بحجم كامل عند النقر عليها
+            window.showFullImage = function(src, name) {
+                const modal = document.createElement('div');
+                modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:pointer;';
+                modal.innerHTML = `
+                    <div style="text-align:center; max-width: 90%;">
+                        <img src="${src}" alt="${name}" style="max-width:100%;max-height:80vh;border-radius:12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+                        <p style="color:white;margin-top:15px;font-size:1.2rem; font-weight: bold;">${name}</p>
+                        <p style="color:#ccc; font-size: 0.9rem;">انقر في أي مكان للإغلاق</p>
+                    </div>
+                `;
+                modal.onclick = () => modal.remove();
+                document.body.appendChild(modal);
+            };
+
+            // 4. اعتراض نموذج حفظ الصنف لرفع الصورة بعد الحفظ
+            const itemForm = document.getElementById('item-form');
+            if (itemForm) {
+                const originalSubmit = itemForm.onsubmit; // حفظ المعالج الأصلي إن وجد
+                
+                itemForm.addEventListener('submit', async function(e) {
+                    // نسمح للنموذج بالإرسال أولاً (أو ننتظر اكتمال عملية الحفظ في app.js)
+                    // ملاحظة: إذا كان app.js يتعامل مع الإرسال عبر fetch، يجب تعديل app.js لاستدعاء uploadItemImage بعد نجاح الطلب.
+                    // هذا الكود هنا كدالة مساعدة يمكنك استدعاؤها من app.js:
+                });
+            }
+
+            // 5. الدالة الفعلية لرفع الصورة (يجب استدعاؤها من app.js بعد نجاح إنشاء/تعديل الصنف)
+            window.uploadItemImage = async function(itemId) {
+                const file = imageInput.files[0];
+                if (!file) return true; // لا يوجد صورة للرفع، نعود بنجاح
+
+                const formData = new FormData();
+                formData.append('file', file);
+
+                try {
+                    const token = localStorage.getItem('token');
+                    const response = await fetch(`/api/items/${itemId}/image`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: formData
+                    });
+
+                    if (!response.ok) {
+                        const err = await response.json();
+                        alert(err.detail || 'فشل رفع الصورة');
+                        return false;
+                    }
+                    return true;
+                } catch (error) {
+                    console.error('خطأ في رفع الصورة:', error);
+                    alert('حدث خطأ أثناء رفع الصورة');
+                    return false;
+                }
+            };
+
+            // 6. دالة لحذف الصورة من الخادم (يمكن ربطها بزر في وضع التعديل)
+            window.deleteItemImage = async function(itemId) {
+                if (!confirm('هل أنت متأكد من حذف صورة هذا الصنف؟')) return;
+
+                try {
+                    const token = localStorage.getItem('token');
+                    const response = await fetch(`/api/items/${itemId}/image`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+
+                    if (response.ok) {
+                        alert('تم حذف الصورة بنجاح');
+                        // إعادة تحميل بيانات الصنف أو تحديث الواجهة
+                        if (typeof loadItems === 'function') loadItems();
+                    } else {
+                        const err = await response.json();
+                        alert(err.detail || 'فشل حذف الصورة');
+                    }
+                } catch (error) {
+                    console.error('خطأ في حذف الصورة:', error);
+                }
+            };
+        });
+    </script>
+</body>
+</html>
