@@ -153,6 +153,7 @@ def create_item(
     user=Depends(require_role("staff")),
 ):
     """إضافة صنف جديد - إذا لم يتم توفير SKU يتم توليده تلقائياً."""
+    from ..models import Shelf
     sku = (data.sku or "").strip()
     if not sku:
         sku = generate_unique_sku(db, None)
@@ -177,6 +178,7 @@ def create_item(
 
     warehouse_id = data.warehouse_id
     category_id = data.category_id
+    shelf_id = data.shelf_id
 
     if data.initial_quantity > 0 and warehouse_id is None:
         raise HTTPException(
@@ -187,6 +189,12 @@ def create_item(
     if warehouse_id is not None:
         if not db.query(Warehouse).filter(Warehouse.id == warehouse_id).first():
             raise HTTPException(status_code=404, detail="المستودع غير موجود")
+    
+    # ✅ التحقق من الرف إذا تم تحديده
+    if shelf_id is not None and shelf_id > 0:
+        shelf = db.query(Shelf).filter(Shelf.id == shelf_id).first()
+        if not shelf:
+            raise HTTPException(status_code=404, detail="الرف غير موجود")
 
     item = Item(
         sku=sku,
@@ -196,6 +204,7 @@ def create_item(
         min_stock=data.min_stock,
         price=data.price,
         warehouse_id=warehouse_id,
+        shelf_id=shelf_id,
     )
     db.add(item)
     db.flush()
@@ -232,6 +241,10 @@ def create_item(
     activity_description = f"إضافة صنف: {item.name} ({item.sku})"
     if data.initial_quantity > 0 and warehouse_id is not None:
         activity_description += f" مع رصيد افتتاحي {data.initial_quantity}"
+    if shelf_id:
+        shelf = db.query(Shelf).filter(Shelf.id == shelf_id).first()
+        if shelf:
+            activity_description += f" على الرف {shelf.name}"
 
     db.add(
         ActivityLog(
@@ -245,6 +258,12 @@ def create_item(
     db.commit()
     db.refresh(item)
     
+    shelf_name = None
+    if item.shelf_id:
+        shelf = db.query(Shelf).filter(Shelf.id == item.shelf_id).first()
+        if shelf:
+            shelf_name = shelf.name
+    
     return ItemResponse(
         id=item.id,
         sku=item.sku,
@@ -255,6 +274,8 @@ def create_item(
         min_stock=item.min_stock,
         price=item.price,
         warehouse_id=item.warehouse_id,
+        shelf_id=item.shelf_id,
+        shelf_name=shelf_name,
         image_path=item.image_path, # ✅ إضافة مسار الصورة
     )
 
@@ -280,8 +301,10 @@ def list_items(
     user=Depends(get_current_user),
 ):
     """قائمة الأصناف"""
-    query = db.query(Item, Category.name.label("category_name")) \
-        .outerjoin(Category, Item.category_id == Category.id)
+    from ..models import Shelf
+    query = db.query(Item, Category.name.label("category_name"), Shelf.name.label("shelf_name")) \
+        .outerjoin(Category, Item.category_id == Category.id) \
+        .outerjoin(Shelf, Item.shelf_id == Shelf.id)
     if sku:
         query = query.filter(Item.sku == sku)
     if name:
@@ -295,13 +318,15 @@ def list_items(
             name=item.name,
             category_id=item.category_id,
             category_name=cat_name,
+            shelf_name=shelf_name,
             unit=item.unit,
             min_stock=item.min_stock,
             price=item.price,
             warehouse_id=item.warehouse_id,
+            shelf_id=item.shelf_id,
             image_path=item.image_path, # ✅ إضافة مسار الصورة
         )
-        for item, cat_name in rows
+        for item, cat_name, shelf_name in rows
     ]
 
 
@@ -312,9 +337,17 @@ def get_item(
     user=Depends(get_current_user),
 ):
     """الحصول على صنف"""
+    from ..models import Shelf
     item = db.query(Item).filter(Item.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="الصنف غير موجود")
+    
+    shelf_name = None
+    if item.shelf_id:
+        shelf = db.query(Shelf).filter(Shelf.id == item.shelf_id).first()
+        if shelf:
+            shelf_name = shelf.name
+    
     return ItemResponse(
         id=item.id,
         sku=item.sku,
@@ -325,6 +358,8 @@ def get_item(
         min_stock=item.min_stock,
         price=item.price,
         warehouse_id=item.warehouse_id,
+        shelf_id=item.shelf_id,
+        shelf_name=shelf_name,
         image_path=item.image_path, # ✅ إضافة مسار الصورة
     )
 
@@ -337,6 +372,7 @@ def update_item(
     user=Depends(require_role("staff")),
 ):
     """تعديل صنف"""
+    from ..models import Shelf
     item = db.query(Item).filter(Item.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="الصنف غير موجود")
@@ -373,6 +409,16 @@ def update_item(
         exists = db.query(Stock).filter(Stock.item_id == item.id, Stock.warehouse_id == data.warehouse_id).first()
         if not exists:
             db.add(Stock(quantity=0, item_id=item.id, warehouse_id=data.warehouse_id))
+    
+    # ✅ تحديث الرف
+    if data.shelf_id is not None:
+        if data.shelf_id > 0:
+            shelf = db.query(Shelf).filter(Shelf.id == data.shelf_id).first()
+            if not shelf:
+                raise HTTPException(status_code=404, detail="الرف غير موجود")
+            item.shelf_id = data.shelf_id
+        else:
+            item.shelf_id = None
 
     db.add(
         ActivityLog(
@@ -386,6 +432,12 @@ def update_item(
     db.commit()
     db.refresh(item)
     
+    shelf_name = None
+    if item.shelf_id:
+        shelf = db.query(Shelf).filter(Shelf.id == item.shelf_id).first()
+        if shelf:
+            shelf_name = shelf.name
+    
     return ItemResponse(
         id=item.id,
         sku=item.sku,
@@ -396,6 +448,8 @@ def update_item(
         min_stock=item.min_stock,
         price=item.price,
         warehouse_id=item.warehouse_id,
+        shelf_id=item.shelf_id,
+        shelf_name=shelf_name,
         image_path=item.image_path, # ✅ إضافة مسار الصورة
     )
 
