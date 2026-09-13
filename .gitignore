@@ -21,17 +21,19 @@ wheels/
 .installed.cfg
 *.egg
 
-# Virtual environments
+# Virtual Environment
 venv/
+env/
 ENV/
-env.bak/
 .venv/
+.env/
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+*.tmp
 
 # Logs
 *.log
@@ -41,81 +43,30 @@ env.bak/
 .env.local
 *.env.*
 
-# Coverage reports
+# Coverage
 .coverage
+coverage/
 htmlcov/
-.coverage.*
-.cache
 
-# Testing
-.pytest_cache/
+# MyPy
 .mypy_cache/
-.hypothesis/
+.dmypy.json
+dmypy.json
 
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-pip-wheel-metadata/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# PyInstaller
-*.manifest
-*.spec
-
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
+# PyTest
 .pytest_cache/
 
-# Translations
-*.mo
-*.pot
+# FastAPI/Uvicorn
+*.db
+*.db-journal
 
-# Django
-*.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
-
-# FastAPI/Swagger
-docs/
-
-# Frontend
+# Frontend build artifacts (if any)
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# OS generated files
+# OS
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
 ```
