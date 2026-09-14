@@ -1242,6 +1242,8 @@ themeToggle.addEventListener('click', () => {
             const selectedItemId = parseInt(elements.transactionItem.value) || 0;
             filterWarehousesForItem(selectedItemId, this.value);
         }
+        // تحديث قائمة الأرفف عند تغيير نوع الحركة
+        updateTransactionShelfSelect();
     });
 
     // Function to filter warehouses based on item and movement type
@@ -1311,13 +1313,15 @@ themeToggle.addEventListener('click', () => {
         }
     }
 
-    // Source warehouse change - re-filter target warehouse for transfers
+    // Source warehouse change - re-filter target warehouse for transfers AND update shelves
     if (elements.transactionWarehouse) {
         elements.transactionWarehouse.addEventListener('change', function() {
             if (elements.transactionType && elements.transactionType.value === 'transfer') {
                 const selectedItemId = parseInt(elements.transactionItem.value) || 0;
                 filterWarehousesForItem(selectedItemId, 'transfer');
             }
+            // تحديث قائمة الأرفف عند تغيير المستودع
+            updateTransactionShelfSelect();
         });
     }
 
@@ -2316,6 +2320,7 @@ function renderItemsTable() {
     elements.itemsTableBody.innerHTML = '';
     const whMap = Object.fromEntries(state.warehouses.map(w => [w.id, w]));
     const catMap = Object.fromEntries(state.categories.map(c => [c.id, c]));
+    const shelfMap = Object.fromEntries(state.shelves.map(s => [s.id, s]));
     const searchTerm = (document.getElementById('item-search').value || '').toLowerCase();
     const filteredItems = state.items.filter(item =>
         !searchTerm ||
@@ -2327,6 +2332,7 @@ function renderItemsTable() {
         const tr = document.createElement('tr');
         const wh = item.warehouse_id ? whMap[item.warehouse_id] : null;
         const cat = item.category_id ? catMap[item.category_id] : null;
+        const shelf = item.shelf_id ? shelfMap[item.shelf_id] : null;
         
         // ✅ إضافة عمود الصورة
         const imageCell = item.image_path 
@@ -2342,6 +2348,7 @@ function renderItemsTable() {
             <td>${formatArabicNumber(item.min_stock)}</td>
             <td>${formatCurrency(item.price)}</td>
             <td>${wh ? esc(wh.name) : '-'}</td>
+            <td>${shelf ? esc(shelf.name) : '-'}</td>
             <td>
                 <button class="btn-action-barcode btn-action" data-action="show-barcode" data-id="${item.id}" title="عرض الباركود">📷</button>
                 <button class="btn-action-edit btn-action" data-action="edit-item" data-id="${item.id}" title="تعديل">✏️</button>
@@ -2404,6 +2411,7 @@ function renderItemsTable() {
         elements.transactionsTableBody.innerHTML = '';
         const itemsMap = Object.fromEntries(state.items.map(i => [i.id, i]));
         const whMap = Object.fromEntries(state.warehouses.map(w => [w.id, w]));
+        const shelfMap = Object.fromEntries(state.shelves.map(s => [s.id, s]));
         const searchTerm = (document.getElementById('transaction-search').value || '').toLowerCase();
         const filteredTransactions = state.transactions.filter(tx => {
             const item = itemsMap[tx.item_id];
@@ -2417,6 +2425,7 @@ function renderItemsTable() {
             const tr = document.createElement('tr');
             const item = itemsMap[tx.item_id];
             const wh = whMap[tx.warehouse_id];
+            const shelf = tx.shelf_id ? shelfMap[tx.shelf_id] : null;
             const targetWh = tx.target_warehouse_id ? whMap[tx.target_warehouse_id] : null;
             // أزرار التعديل والحذف تظهر للمدراء فقط
             const actions = (userData && userData.role === 'admin')
@@ -2428,6 +2437,7 @@ function renderItemsTable() {
                 <td>${formatDateTime(tx.date)}</td>
                 <td>${item ? esc(item.name) : esc(tx.item_id)}</td>
                 <td>${targetWh ? `${whLabel} ← ${esc(targetWh.name)}` : whLabel}</td>
+                <td>${shelf ? esc(shelf.name) : '-'}</td>
                 <td>${getTransactionTypeArabic(tx.type)}</td>
                 <td>${formatArabicNumber(tx.quantity)}</td>
                 <td>${esc(tx.notes) || '-'}</td>
@@ -2967,6 +2977,32 @@ function resetItemForm() {
         elements.transferTargetRow.style.display = 'none';
         const searchInput = document.getElementById('transaction-item-search');
         if (searchInput) searchInput.value = '';
+        // تفريغ قائمة الأرفف
+        const transactionShelf = document.getElementById('transaction-shelf');
+        if (transactionShelf) {
+            transactionShelf.innerHTML = '<option value="">اختر الرف</option>';
+        }
+    }
+    
+    function updateTransactionShelfSelect() {
+        const shelfSelect = document.getElementById('transaction-shelf');
+        if (!shelfSelect) return;
+        const warehouseId = elements.transactionWarehouse.value;
+        const currentShelfValue = shelfSelect.value;
+        
+        shelfSelect.innerHTML = '<option value="">اختر الرف</option>';
+        
+        if (warehouseId) {
+            const filteredShelves = state.shelves.filter(s => s.warehouse_id == warehouseId);
+            filteredShelves.forEach(shelf => {
+                const opt = document.createElement('option');
+                opt.value = shelf.id;
+                opt.textContent = shelf.name;
+                shelfSelect.appendChild(opt);
+            });
+        }
+        
+        shelfSelect.value = currentShelfValue;
     }
 
     // --- Item Modal Functions ---
@@ -3015,6 +3051,9 @@ function resetItemForm() {
         elements.transactionNotes.value = tx.notes || '';
         if (tx.target_warehouse_id) {
             elements.transactionTargetWarehouse.value = tx.target_warehouse_id;
+        }
+        if (tx.shelf_id) {
+            elements.transactionShelf.value = tx.shelf_id;
         }
         elements.transactionType.dispatchEvent(new Event('change'));
 
