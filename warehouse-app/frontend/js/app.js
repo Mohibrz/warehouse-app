@@ -321,7 +321,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function getTransactionTypeArabic(type) {
         return {
             'in': 'دخول', 'out': 'خروج',
-            'transfer': 'نقل', 'adjustment': 'تعديل'
+            'transfer': 'نقل'
         }[type] || type;
     }
 
@@ -1265,38 +1265,42 @@ themeToggle.addEventListener('click', () => {
                     warehouseSelect.appendChild(opt);
                     return;
                 }
-                // For transfer source, show all warehouses too
-                if (isTransfer) {
+                // For transfer and exit, only show warehouses with stock
+                if (isTransfer || txType === 'out') {
+                    const stock = state.stock.find(s => s.item_id == selectedItemId && s.warehouse_id == wh.id);
+                    if (!stock || stock.quantity <= 0) return;
                     const opt = document.createElement('option');
                     opt.value = wh.id;
-                    opt.textContent = wh.name;
+                    opt.textContent = `${wh.name} (${formatArabicNumber(stock.quantity)})`;
+                    opt.style.color = 'var(--success-color)';
                     warehouseSelect.appendChild(opt);
                     return;
                 }
-                // For exit and others, only show warehouses with stock
-                const stock = state.stock.find(s => s.item_id == selectedItemId && s.warehouse_id == wh.id);
-                if (!stock || stock.quantity <= 0) return;
+                // For other types, show all warehouses
                 const opt = document.createElement('option');
                 opt.value = wh.id;
-                opt.textContent = `${wh.name} (${formatArabicNumber(stock.quantity)})`;
-                opt.style.color = 'var(--success-color)';
+                opt.textContent = wh.name;
                 warehouseSelect.appendChild(opt);
             });
             warehouseSelect.value = currentWhValue;
         }
 
-        // Filter target warehouse (for transfer) - show ALL warehouses except selected source
+        // Filter target warehouse (for transfer) - show ONLY warehouses with stock for this item (except source)
         const targetWarehouseSelect = elements.transactionTargetWarehouse;
         if (targetWarehouseSelect) {
             const currentTargetValue = targetWarehouseSelect.value;
             targetWarehouseSelect.innerHTML = '<option value="">اختر مستودع الهدف</option>';
             const sourceWarehouseId = parseInt(elements.transactionWarehouse.value) || 0;
             state.warehouses.forEach(wh => {
-                // For transfer, show all warehouses except source
-                if (isTransfer && wh.id !== sourceWarehouseId) {
+                // For transfer, show only warehouses that have stock of this item (excluding source)
+                if (isTransfer) {
+                    const stock = state.stock.find(s => s.item_id == selectedItemId && s.warehouse_id == wh.id);
+                    // Skip if no stock or if it's the source warehouse
+                    if (!stock || stock.quantity <= 0 || wh.id === sourceWarehouseId) return;
                     const opt = document.createElement('option');
                     opt.value = wh.id;
-                    opt.textContent = wh.name;
+                    opt.textContent = `${wh.name} (${formatArabicNumber(stock.quantity)})`;
+                    opt.style.color = 'var(--success-color)';
                     targetWarehouseSelect.appendChild(opt);
                     return;
                 }
@@ -1786,7 +1790,6 @@ themeToggle.addEventListener('click', () => {
                             <td style="color:var(--success-color);">${day.in_count} (${formatArabicNumber(day.in_quantity)})</td>
                             <td style="color:var(--danger-color);">${day.out_count} (${formatArabicNumber(day.out_quantity)})</td>
                             <td style="color:var(--secondary-color);">${day.transfer_count} (${formatArabicNumber(day.transfer_quantity)})</td>
-                            <td>${day.adjustment_count} (${formatArabicNumber(day.adjustment_quantity)})</td>
                             <td><strong>${day.total_count}</strong></td>
                         </tr>
                     `).join('')}
@@ -2239,7 +2242,7 @@ themeToggle.addEventListener('click', () => {
 
     function renderCharts(transactions, stock) {
         // Chart 1: Transactions by type
-        const txCounts = {in: 0, out: 0, transfer: 0, adjustment: 0};
+        const txCounts = {in: 0, out: 0, transfer: 0};
         transactions.forEach(tx => {
             if (txCounts.hasOwnProperty(tx.type)) txCounts[tx.type]++;
         });
@@ -2249,10 +2252,10 @@ themeToggle.addEventListener('click', () => {
             txChart = new Chart(ctx1, {
                 type: 'doughnut',
                 data: {
-                    labels: ['دخول', 'خروج', 'نقل', 'تعديل'],
+                    labels: ['دخول', 'خروج', 'نقل'],
                     datasets: [{
-                        data: [txCounts.in, txCounts.out, txCounts.transfer, txCounts.adjustment],
-                        backgroundColor: ['#27ae60', '#e74c3c', '#3498db', '#f39c12']
+                        data: [txCounts.in, txCounts.out, txCounts.transfer],
+                        backgroundColor: ['#27ae60', '#e74c3c', '#3498db']
                     }]
                 },
                 options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
@@ -2428,7 +2431,7 @@ function renderItemsTable() {
             const shelf = tx.shelf_id ? shelfMap[tx.shelf_id] : null;
             const targetWh = tx.target_warehouse_id ? whMap[tx.target_warehouse_id] : null;
             // أزرار التعديل والحذف تظهر للمدراء فقط
-            const actions = (userData && userData.role === 'admin')
+            const actions = (userData && userData.role === 'admin' && tx.type !== 'adjustment')
                 ? `<button class="btn-action-edit btn-action" data-action="edit-transaction" data-id="${tx.id}" title="تعديل">✏️</button>
                    <button class="btn-action-delete btn-action" data-action="delete-transaction" data-id="${tx.id}" title="حذف">🗑️</button>`
                 : '-';

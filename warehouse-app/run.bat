@@ -1,46 +1,74 @@
 @echo off
-chcp 65001 >nul
-echo ===================================
-echo نظام إدارة المخازن - تشغيل
-echo ===================================
-echo.
+chcp 65001 >nul 2>&1
+setlocal enabledelayedexpansion
+
+REM Check if Python is installed
+python --version >nul 2>&1
+if %errorlevel% neq 0 (
+    echo Error: Python is not installed. Please install Python first.
+    pause
+    exit /b 1
+)
 
 REM Check if venv exists
 if not exist venv\Scripts\activate.bat (
-    echo إنشاء البيئة الافتراضية...
+    echo Creating virtual environment...
     python -m venv venv
-    call venv\Scripts\activate.bat
-    venv\Scripts\python.exe -m pip install --upgrade pip
-    venv\Scripts\python.exe -m pip install -r backend\requirements.txt
-) else (
-    REM Activate venv
-    echo تفعيل البيئة...
-    call venv\Scripts\activate.bat
+    if %errorlevel% neq 0 (
+        echo Error: Failed to create virtual environment.
+        pause
+        exit /b 1
+    )
 )
 
-REM Check if Tailscale Serve is active
-tailscale serve status >nul 2>&1
+REM Activate venv
+echo Activating virtual environment...
+call venv\Scripts\activate.bat
+if %errorlevel% neq 0 (
+    echo Error: Failed to activate virtual environment.
+    pause
+    exit /b 1
+)
+
+REM Upgrade pip and install requirements
+echo Upgrading pip and installing requirements...
+python -m pip install --upgrade pip --quiet
+python -m pip install -r backend\requirements.txt
+if %errorlevel% neq 0 (
+    echo Error: Failed to install requirements. Make sure requirements.txt exists.
+    pause
+    exit /b 1
+)
+
+REM Check if Tailscale is installed and running
+where tailscale >nul 2>&1
 if %errorlevel% == 0 (
-    echo Tailscale Serve: مفعّل
+    tailscale status >nul 2>&1
+    if %errorlevel% == 0 (
+        echo Tailscale: Connected
+        echo Note: For Tailscale access, run 'tailscale serve https://9000' in a separate window
+    ) else (
+        echo Tailscale: Not connected - Start Tailscale first
+    )
 ) else (
-    echo Tailscale Serve: غير مفعّل - شغّل 'tailscale serve 9000' يدوياً
+    echo Tailscale: Not installed - Skipping Tailscale check
 )
 
 echo.
 echo ===================================
-echo روابط الوصول
+echo Access Links
 echo ===================================
-echo محلياً:      http://localhost:9000
-echo Tailscale:  https://desktop-vlbl3dk.tail4614ad.ts.net
-echo API:        http://localhost:9000/docs
+echo Local:       http://localhost:9000
+echo API Docs:    http://localhost:9000/docs
 echo.
-echo المستخدم: admin
-echo كلمة المرور: admin123
+echo User: admin
+echo Password: admin123
 echo.
-echo اضغط Ctrl+C للإيقاف
+echo Press Ctrl+C to stop
 echo ===================================
 echo.
 
 REM Start the server using venv python
-venv\Scripts\python.exe -m uvicorn backend.main:app --host 127.0.0.1 --port 9000
+echo Starting server...
+python -m uvicorn backend.main:app --host 127.0.0.1 --port 9000
 pause
